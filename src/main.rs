@@ -57,7 +57,7 @@ async fn get_user(
 
 async fn create_user(
     State(state): State<AppState>,
-    Json(payload): Json<RequestUser>
+    Json(body): Json<RequestUser>
 ) -> impl IntoResponse {
     let query = r#"
         INSERT INTO items (name)
@@ -66,7 +66,7 @@ async fn create_user(
     "#;
 
     match query_as::<_, User>(query)
-        .bind(payload.name)
+        .bind(body.name)
         .fetch_one(&state.pool)
         .await
     {
@@ -80,7 +80,7 @@ async fn delete_user(
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let query = r#"
-        DELETE FROM items 
+        DELETE FROM items
         WHERE id = $1
     "#;
 
@@ -103,7 +103,7 @@ async fn delete_user(
 async fn update_user(
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    Json(payload): Json<RequestUser>
+    Json(body): Json<RequestUser>
 ) -> impl IntoResponse {
     let query = r#"
         UPDATE items
@@ -113,7 +113,7 @@ async fn update_user(
     "#;
 
     match query_as::<_, User>(query)
-        .bind(&payload.name)
+        .bind(&body.name)
         .bind(id)
         .fetch_optional(&state.pool)
         .await
@@ -133,7 +133,7 @@ async fn main() -> Result<(), sqlx::Error> {
 
     let app = Router::new()
         .route("/", get(|| async { "Hello, world!" }))
-        .route("/users", 
+        .route("/users",
             get(list_users)
             .post(create_user)
         )
@@ -144,7 +144,7 @@ async fn main() -> Result<(), sqlx::Error> {
         )
         .with_state(AppState {pool});
 
-    let addr = "0.0.0.0:3000";
+    let addr = "0.0.0.0:8080";
     let listener = TcpListener::bind(addr).await?;
 
     println!("Listening on http://{}", addr);
