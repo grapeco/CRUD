@@ -1,6 +1,6 @@
 use std::env;
 
-use axum::{Json, Router, extract::{Path, State}, http::StatusCode, response::IntoResponse, routing::{delete, get}};
+use axum::{Json, Router, extract::{Path, State}, http::StatusCode, response::IntoResponse, routing::{get}};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool, Result, query_as};
 use tokio::net::TcpListener;
@@ -70,7 +70,7 @@ async fn create_user(
         .fetch_one(&state.pool)
         .await
     {
-        Ok(user) => (StatusCode::OK, Json(user)).into_response(),
+        Ok(user) => (StatusCode::CREATED, Json(user)).into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response()
     }
 }
@@ -138,9 +138,9 @@ async fn main() -> Result<(), sqlx::Error> {
             .post(create_user)
         )
         .route("/users/{id}",
-            delete(delete_user)
-            .get(get_user)
+            get(get_user)
             .put(update_user)
+            .delete(delete_user)
         )
         .with_state(AppState {pool});
 

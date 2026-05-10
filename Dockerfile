@@ -7,8 +7,7 @@ FROM debian:bookworm-slim
 WORKDIR /app
 
 RUN apt-get update && \
-    apt-get install -y libssl3
+    apt-get install -y openssl
 COPY --from=builder /app/target/release/server .
-
 EXPOSE 8080
 CMD ["./server"]
