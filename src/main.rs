@@ -1,41 +1,54 @@
 use std::env;
 
 use axum::{Json, Router, extract::{Path, State}, http::StatusCode, response::IntoResponse, routing::{get}};
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool, Result, query_as};
 use tokio::net::TcpListener;
+use tower_http::cors::CorsLayer;
 
 #[derive(Clone)]
 struct AppState {
     pool: PgPool
 }
 
-#[derive(Serialize, Deserialize, FromRow)]
-struct User {
+#[derive(Serialize, Deserialize, FromRow, Debug)]
+struct Task {
     id: i32,
-    name: String,
+    description: String,
+    status: String,
+    created_at: NaiveDateTime
 }
 
 #[derive(Deserialize)]
-struct RequestUser {
-    name: String
+struct CreateTask {
+    description: String,
 }
 
-async fn list_users(
+#[derive(Deserialize)]
+struct UpdateTask {
+    description: String,
+    status: String,
+}
+
+async fn list_tasks(
     State(state): State<AppState>
 ) -> impl IntoResponse {
     let query = "SELECT * FROM items";
 
-    match query_as::<_, User>(query)
+    match query_as::<_, Task>(query)
         .fetch_all(&state.pool)
         .await
     {
-        Ok(users) => (StatusCode::OK, Json(users)).into_response(),
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        Ok(tasks) => (StatusCode::OK, Json(tasks)).into_response(),
+        Err(e) => {
+            println!("{}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response() 
+        }
     }
 }
 
-async fn get_user(
+async fn get_task(
     State(state): State<AppState>,
     Path(id): Path<i32>
 ) -> impl IntoResponse {
@@ -44,38 +57,44 @@ async fn get_user(
         WHERE id = $1
     "#;
 
-    match query_as::<_, User>(query)
+    match query_as::<_, Task>(query)
         .bind(id)
         .fetch_optional(&state.pool)
         .await
     {
-        Ok(Some(user)) => (StatusCode::OK, Json(user)).into_response(),
+        Ok(Some(task)) => (StatusCode::OK, Json(task)).into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        Err(e) => {
+            println!("{}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response() 
+        }
     }
 }
 
-async fn create_user(
+async fn create_task(
     State(state): State<AppState>,
-    Json(body): Json<RequestUser>
+    Json(body): Json<CreateTask>
 ) -> impl IntoResponse {
     let query = r#"
-        INSERT INTO items (name)
+        INSERT INTO items (description)
         VALUES ($1)
-        RETURNING id, name
+        RETURNING id, description, status, created_at
     "#;
 
-    match query_as::<_, User>(query)
-        .bind(body.name)
+    match query_as::<_, Task>(query)
+        .bind(body.description)
         .fetch_one(&state.pool)
         .await
     {
-        Ok(user) => (StatusCode::CREATED, Json(user)).into_response(),
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        Ok(task) => (StatusCode::CREATED, Json(task)).into_response(),
+        Err(e) => {
+            println!("{}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
     }
 }
 
-async fn delete_user(
+async fn delete_task(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
@@ -96,31 +115,38 @@ async fn delete_user(
                 StatusCode::NOT_FOUND.into_response()
             }
         }
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        Err(e) => {
+            println!("{}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
     }
 }
 
-async fn update_user(
+async fn update_task(
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    Json(body): Json<RequestUser>
+    Json(body): Json<UpdateTask>
 ) -> impl IntoResponse {
     let query = r#"
         UPDATE items
-        SET name = $1
-        WHERE id = $2
-        RETURNING id, name
+        SET description = $1, status = $2
+        WHERE id = $3
+        RETURNING id, description, status, created_at
     "#;
 
-    match query_as::<_, User>(query)
-        .bind(&body.name)
+    match query_as::<_, Task>(query)
+        .bind(&body.description)
+        .bind(&body.status)
         .bind(id)
         .fetch_optional(&state.pool)
         .await
     {
-        Ok(Some(user)) => (StatusCode::OK, Json(user)).into_response(),
+        Ok(Some(task)) => (StatusCode::OK, Json(task)).into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        Err(e) => {
+            println!("{}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
     }
 }
 
@@ -133,16 +159,17 @@ async fn main() -> Result<(), sqlx::Error> {
 
     let app = Router::new()
         .route("/", get(|| async { "Hello, world!" }))
-        .route("/users",
-            get(list_users)
-            .post(create_user)
+        .route("/tasks",
+            get(list_tasks)
+            .post(create_task)
         )
-        .route("/users/{id}",
-            get(get_user)
-            .put(update_user)
-            .delete(delete_user)
+        .route("/tasks/{id}",
+            get(get_task)
+            .put(update_task)
+            .delete(delete_task)
         )
-        .with_state(AppState {pool});
+        .with_state(AppState {pool})
+        .layer(CorsLayer::permissive());
 
     let addr = "0.0.0.0:8080";
     let listener = TcpListener::bind(addr).await?;
