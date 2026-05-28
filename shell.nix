@@ -5,10 +5,12 @@ with pkgs;
 mkShell {
   nativeBuildInputs = [ pkg-config ];
   buildInputs = with pkgs; [
-    (with pkgs.fenix; combine [
-      complete.toolchain
-      targets.x86_64-unknown-linux-musl.latest.rust-std
-    ])
+    # (with pkgs.fenix; combine [
+    #   complete.toolchain
+    #   targets.x86_64-unknown-linux-musl.latest.rust-std
+    # ])
+    rustc
+    cargo
     openssl
     sqlx-cli
   ];

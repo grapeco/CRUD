@@ -42,7 +42,7 @@ async fn list_tasks(
     {
         Ok(tasks) => (StatusCode::OK, Json(tasks)).into_response(),
         Err(e) => {
-            println!("{}", e);
+            eprintln!("{}", e);
             StatusCode::INTERNAL_SERVER_ERROR.into_response() 
         }
     }
@@ -65,7 +65,7 @@ async fn get_task(
         Ok(Some(task)) => (StatusCode::OK, Json(task)).into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
-            println!("{}", e);
+            eprintln!("{}", e);
             StatusCode::INTERNAL_SERVER_ERROR.into_response() 
         }
     }
@@ -88,7 +88,7 @@ async fn create_task(
     {
         Ok(task) => (StatusCode::CREATED, Json(task)).into_response(),
         Err(e) => {
-            println!("{}", e);
+            eprintln!("{}", e);
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
@@ -116,7 +116,7 @@ async fn delete_task(
             }
         }
         Err(e) => {
-            println!("{}", e);
+            eprintln!("{}", e);
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
@@ -144,7 +144,7 @@ async fn update_task(
         Ok(Some(task)) => (StatusCode::OK, Json(task)).into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
-            println!("{}", e);
+            eprintln!("{}", e);
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
