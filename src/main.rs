@@ -157,6 +157,19 @@ async fn main() -> Result<(), sqlx::Error> {
     let db_url = env::var("DATABASE_URL").unwrap();
     let pool = PgPool::connect(&db_url).await?;
 
+    let start_query = r#"
+        CREATE TABLE IF NOT EXISTS items (
+            id SERIAL PRIMARY KEY,
+            description TEXT,
+            status VARCHAR(50) NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'done')),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    "#;
+
+    sqlx::query(start_query)
+        .execute(&pool)
+        .await?;
+
     let app = Router::new()
         .route("/", get(|| async { "Hello, world!" }))
         .route("/tasks",

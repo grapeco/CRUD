@@ -2,7 +2,7 @@
 
 with pkgs;
 
-mkShell {
+mkShell rec {
   nativeBuildInputs = [ pkg-config ];
   buildInputs = with pkgs; [
     # (with pkgs.fenix; combine [
@@ -15,7 +15,7 @@ mkShell {
     sqlx-cli
   ];
 
-  LD_LIBRARY_PATH = lib.makeLibraryPath [ openssl ];
+  LD_LIBRARY_PATH = lib.makeLibraryPath [ buildInputs ];
 
   shellHook = ''
     export PATH=$PATH:''${CARGO_HOME:-~/.cargo}/bin
